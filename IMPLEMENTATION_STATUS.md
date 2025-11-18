@@ -8,7 +8,7 @@ This document tracks the implementation status of all phases from build.md and t
 
 ---
 
-## ✅ Completed Phases (Phases 0-21, excluding 16, 22)
+## ✅ Completed Phases (Phases 0-21, excluding 22)
 
 ### Core Implementation (Phases 0-12) - COMPLETE
 
@@ -170,6 +170,27 @@ codex_prime/orchestration/
 tests/test_orchestration.py
 ```
 
+**Phase 16: Autonomous Workflow Automation** ✅
+- Workflow engine with YAML/JSON support
+- Cron-based scheduler for periodic tasks
+- Event-driven triggers
+- Background async task queue
+- Progress tracking and notifications
+
+**Files Created**:
+```
+codex_prime/automation/
+  workflow_engine.py   # Workflow definition & execution (320 lines)
+  scheduler.py         # Cron-based scheduler (240 lines)
+  event_triggers.py    # Event-driven triggers (280 lines)
+  task_queue.py        # Background task queue (320 lines)
+  progress_tracker.py  # Progress tracking (260 lines)
+examples/workflows/
+  daily_report.yaml              # Daily analytics workflow
+  code_review_automation.yaml    # Automated code review
+tests/test_automation.py
+```
+
 **Phase 18: Real-Time Collaboration** ✅
 - WebSocket server for real-time communication
 - Token-by-token streaming responses
@@ -222,21 +243,6 @@ web-ui/
 
 ## 🚧 In Progress / Remaining Phases
 
-### Medium Priority (Enhanced Capabilities)
-
-**Phase 16: Autonomous Workflow Automation** 🔜
-- Workflow engine (YAML/JSON definitions)
-- Cron-based scheduling
-- Event-driven triggers
-- Background execution (async queue)
-- Progress tracking and notifications
-
-**Status**: Not started
-**Priority**: Medium
-**Estimated Effort**: 5-6 weeks
-
----
-
 ### Enhancement Phases
 
 **Phase 22: Plugin System & Marketplace** 🔜
@@ -255,9 +261,9 @@ web-ui/
 ## Implementation Statistics
 
 ### Completed
-- **Total Phases Complete**: 22 / 25 (88%)
+- **Total Phases Complete**: 23 / 25 (92%)
 - **Core System**: 13 / 13 (100%)
-- **Expansions**: 9 / 12 (75%)
+- **Expansions**: 10 / 12 (83%)
 
 ### Files Created
 - **Python modules**: 58+ (backend)

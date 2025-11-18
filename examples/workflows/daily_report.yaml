@@ -1,0 +1,88 @@
+# Daily Report Workflow
+# Generates a daily analytics report and sends notifications
+
+workflow_id: daily_report
+name: Daily Analytics Report
+description: Generates a comprehensive daily report with analytics and insights
+
+variables:
+  report_recipients:
+    - admin@company.com
+  report_format: pdf
+
+max_parallel: 2
+timeout: 3600  # 1 hour
+
+steps:
+  - step_id: collect_metrics
+    name: Collect Daily Metrics
+    type: agent
+    config:
+      agent_name: data_analyst
+      task: "Collect and summarize metrics from the past 24 hours"
+    retry_count: 2
+    retry_delay: 30
+
+  - step_id: generate_insights
+    name: Generate Insights
+    type: agent
+    depends_on:
+      - collect_metrics
+    config:
+      agent_name: data_analyst
+      task: "Analyze metrics and generate key insights"
+    retry_count: 1
+
+  - step_id: create_visualizations
+    name: Create Charts
+    type: tool
+    depends_on:
+      - collect_metrics
+    config:
+      tool_name: generate_charts
+      parameters:
+        data: "{{steps.collect_metrics.result}}"
+        chart_types:
+          - line
+          - bar
+          - pie
+    on_error: continue
+
+  - step_id: compile_report
+    name: Compile Report
+    type: script
+    depends_on:
+      - generate_insights
+      - create_visualizations
+    config:
+      script: |
+        # Compile report from previous steps
+        metrics = context['steps']['collect_metrics']['result']
+        insights = context['steps']['generate_insights']['result']
+        charts = context['steps']['create_visualizations'].get('result', [])
+
+        report = {
+          'date': context['date'],
+          'metrics': metrics,
+          'insights': insights,
+          'charts': charts
+        }
+
+        return report
+    timeout: 300
+
+  - step_id: send_notifications
+    name: Send Report Notifications
+    type: http
+    depends_on:
+      - compile_report
+    config:
+      method: POST
+      url: "https://api.company.com/notifications/send"
+      headers:
+        Content-Type: application/json
+      body:
+        type: daily_report
+        recipients: "{{variables.report_recipients}}"
+        report: "{{steps.compile_report.result}}"
+    on_error: continue

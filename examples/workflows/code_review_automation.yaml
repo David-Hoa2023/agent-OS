@@ -1,0 +1,111 @@
+# Automated Code Review Workflow
+# Reviews code changes and runs security scans
+
+workflow_id: code_review_automation
+name: Automated Code Review
+description: Automatically review code, run tests, and perform security scans
+
+variables:
+  repository: agent-OS
+  branch: main
+  slack_webhook: "https://hooks.slack.com/services/..."
+
+max_parallel: 3
+timeout: 1800  # 30 minutes
+
+steps:
+  - step_id: fetch_changes
+    name: Fetch Code Changes
+    type: tool
+    config:
+      tool_name: git_diff
+      parameters:
+        repository: "{{variables.repository}}"
+        branch: "{{variables.branch}}"
+
+  - step_id: code_review
+    name: AI Code Review
+    type: agent
+    depends_on:
+      - fetch_changes
+    config:
+      agent_name: code_reviewer
+      task: "Review the following code changes"
+      context:
+        changes: "{{steps.fetch_changes.result}}"
+    retry_count: 1
+
+  - step_id: bug_analysis
+    name: Bug Detection
+    type: agent
+    depends_on:
+      - fetch_changes
+    config:
+      agent_name: bug_hunter
+      task: "Analyze code for potential bugs and security issues"
+      context:
+        code: "{{steps.fetch_changes.result}}"
+
+  - step_id: run_tests
+    name: Run Test Suite
+    type: tool
+    depends_on:
+      - fetch_changes
+    config:
+      tool_name: execute_bash
+      parameters:
+        command: "pytest tests/ --cov --cov-report=json"
+    timeout: 600
+
+  - step_id: security_scan
+    name: Security Vulnerability Scan
+    type: tool
+    depends_on:
+      - fetch_changes
+    config:
+      tool_name: execute_bash
+      parameters:
+        command: "bandit -r codex_prime/ -f json"
+    on_error: continue
+
+  - step_id: aggregate_results
+    name: Aggregate Results
+    type: script
+    depends_on:
+      - code_review
+      - bug_analysis
+      - run_tests
+      - security_scan
+    config:
+      script: |
+        results = {
+          'review': context['steps']['code_review']['result'],
+          'bugs': context['steps']['bug_analysis']['result'],
+          'tests': context['steps']['run_tests'].get('result', 'N/A'),
+          'security': context['steps']['security_scan'].get('result', 'N/A'),
+          'passed': True
+        }
+
+        # Check if all checks passed
+        if 'failed' in str(results.get('tests', '')).lower():
+            results['passed'] = False
+
+        return results
+
+  - step_id: post_to_slack
+    name: Post Results to Slack
+    type: http
+    depends_on:
+      - aggregate_results
+    config:
+      method: POST
+      url: "{{variables.slack_webhook}}"
+      headers:
+        Content-Type: application/json
+      body:
+        text: "Code Review Complete"
+        blocks:
+          - type: section
+            text:
+              type: mrkdwn
+              text: "*Code Review Results*\nStatus: {{steps.aggregate_results.result.passed}}"
