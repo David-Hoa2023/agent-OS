@@ -1,0 +1,30 @@
+id: example-weather-tool
+name: Weather Tool
+version: 1.0.0
+type: tool
+entry_point: tool.py
+author: Codex Prime Team
+description: A simple weather information tool that demonstrates plugin functionality
+license: MIT
+homepage: https://github.com/codex-prime/plugins/weather-tool
+repository: https://github.com/codex-prime/plugins/weather-tool
+keywords:
+  - weather
+  - api
+  - utility
+  - example
+dependencies: []
+python_requires: ">=3.8"
+hooks:
+  - init
+  - shutdown
+config_schema:
+  type: object
+  properties:
+    api_key:
+      type: string
+      description: API key for weather service (optional for demo)
+    default_city:
+      type: string
+      description: Default city for weather queries
+      default: "San Francisco"

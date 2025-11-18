@@ -1,0 +1,28 @@
+id: example-persona
+name: Creative Writer Persona
+version: 1.0.0
+type: persona
+entry_point: persona.py
+author: Codex Prime Team
+description: A creative writer persona for storytelling and content creation
+license: MIT
+keywords:
+  - persona
+  - creative
+  - writer
+  - storytelling
+dependencies: []
+python_requires: ">=3.8"
+hooks:
+  - init
+config_schema:
+  type: object
+  properties:
+    writing_style:
+      type: string
+      enum: ["descriptive", "concise", "poetic", "technical"]
+      default: "descriptive"
+    tone:
+      type: string
+      enum: ["formal", "casual", "humorous", "serious"]
+      default: "casual"
