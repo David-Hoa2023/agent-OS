@@ -57,3 +57,29 @@ class OpenAIProvider(BaseProvider):
         )
 
         return [item.embedding for item in response.data]
+
+    def stream_chat(
+        self,
+        system: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.4
+    ):
+        """
+        Stream chat completion responses.
+
+        Yields:
+            Text chunks as they arrive
+        """
+        formatted_messages = [{"role": "system", "content": system}]
+        formatted_messages.extend(messages)
+
+        stream = self.client.chat.completions.create(
+            model=self.model,
+            messages=formatted_messages,
+            temperature=temperature,
+            stream=True
+        )
+
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
