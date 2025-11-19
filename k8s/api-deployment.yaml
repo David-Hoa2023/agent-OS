@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codex-prime-api
+  namespace: codex-prime
+  labels:
+    app: codex-prime-api
+    component: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: codex-prime-api
+  template:
+    metadata:
+      labels:
+        app: codex-prime-api
+        component: backend
+    spec:
+      containers:
+      - name: api
+        image: codex-prime:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        envFrom:
+        - configMapRef:
+            name: codex-prime-config
+        - secretRef:
+            name: codex-prime-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: codex-data
+          mountPath: /home/codex/.codex_prime
+        - name: personas
+          mountPath: /app/personas
+          readOnly: true
+      volumes:
+      - name: codex-data
+        persistentVolumeClaim:
+          claimName: codex-prime-pvc
+      - name: personas
+        configMap:
+          name: codex-prime-personas
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: codex-prime-api-service
+  namespace: codex-prime
+  labels:
+    app: codex-prime-api
+spec:
+  type: LoadBalancer
+  selector:
+    app: codex-prime-api
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  sessionAffinity: ClientIP

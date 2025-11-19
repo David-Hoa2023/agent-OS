@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: codex-prime-config
+  namespace: codex-prime
+data:
+  DATABASE_URL: "postgresql://codex:codexprime@postgres-service:5432/codexprime"
+  REDIS_URL: "redis://redis-service:6379/0"
+  CHROMADB_URL: "http://chromadb-service:8000"
+  CODEX_PRIME_HOME: "/home/codex/.codex_prime"
+  PYTHONUNBUFFERED: "1"
+  LOG_LEVEL: "INFO"
