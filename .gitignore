@@ -61,3 +61,4 @@ dmypy.json
 
 # OS
 Thumbs.db
+.github/workflows/
