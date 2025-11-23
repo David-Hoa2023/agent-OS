@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "codex-prime.fullname" . }}-api
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "codex-prime.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "codex-prime.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "codex-prime.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "codex-prime.serviceAccountName" . }}
+      containers:
+      - name: api
+        image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.api.service.targetPort }}
+          protocol: TCP
+        env:
+        {{- range .Values.api.env }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+        - name: DATABASE_URL
+          value: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ include "codex-prime.fullname" . }}-postgresql:{{ .Values.postgresql.service.port }}/{{ .Values.postgresql.auth.database }}"
+        - name: REDIS_URL
+          value: "redis://{{ include "codex-prime.fullname" . }}-redis:{{ .Values.redis.service.port }}/0"
+        - name: CHROMADB_URL
+          value: "http://{{ include "codex-prime.fullname" . }}-chromadb:{{ .Values.chromadb.service.port }}"
+        {{- if .Values.secrets.create }}
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "codex-prime.fullname" . }}-secrets
+              key: openai-api-key
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "codex-prime.fullname" . }}-secrets
+              key: anthropic-api-key
+        {{- else if .Values.secrets.existingSecret }}
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.existingSecret }}
+              key: openai-api-key
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secrets.existingSecret }}
+              key: anthropic-api-key
+        {{- end }}
+        {{- if .Values.api.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.api.livenessProbe.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.api.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.api.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.api.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.api.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.api.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.api.readinessProbe.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.api.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.api.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.api.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.api.readinessProbe.failureThreshold }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.api.resources | nindent 12 }}
+        volumeMounts:
+        - name: codex-data
+          mountPath: /home/codex/.codex_prime
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+      volumes:
+      - name: codex-data
+        persistentVolumeClaim:
+          claimName: {{ include "codex-prime.fullname" . }}-pvc
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

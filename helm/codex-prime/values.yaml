@@ -1,0 +1,220 @@
+# Default values for codex-prime
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+## Global settings
+global:
+  namespace: codex-prime
+
+## Codex Prime API deployment
+api:
+  replicaCount: 3
+
+  image:
+    repository: codex-prime/agent-os
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 8000
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  livenessProbe:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  env:
+    - name: CODEX_PRIME_HOME
+      value: "/home/codex/.codex_prime"
+    - name: PYTHONUNBUFFERED
+      value: "1"
+    - name: LOG_LEVEL
+      value: "INFO"
+
+## PostgreSQL database
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "15-alpine"
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: "standard"
+
+  auth:
+    database: codexprime
+    username: codex
+    # Use existingSecret for production
+    password: "changeme"
+    existingSecret: ""
+
+## Redis cache
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+
+  service:
+    type: ClusterIP
+    port: 6379
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "standard"
+
+## ChromaDB vector store
+chromadb:
+  enabled: true
+  image:
+    repository: chromadb/chroma
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "standard"
+
+## Secrets configuration
+secrets:
+  # Use existing secret or create from values
+  create: true
+  existingSecret: ""
+
+  # API keys (only used if secrets.create is true)
+  # For production, use existingSecret instead
+  openaiApiKey: ""
+  anthropicApiKey: ""
+  postgresPassword: "changeme"
+
+## Ingress configuration
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: api.codex-prime.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: codex-prime-tls
+      hosts:
+        - api.codex-prime.com
+
+## Persistence
+persistence:
+  enabled: true
+  storageClass: "standard"
+  accessMode: ReadWriteMany
+  size: 10Gi
+
+## ServiceAccount
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+## Network Policy
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+
+## Monitoring
+monitoring:
+  enabled: false
+  prometheus:
+    enabled: false
+    port: 9090
+  grafana:
+    enabled: false
+    port: 3000
+
+## Security Context
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsNonRoot: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+## Node selection
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
